@@ -12,16 +12,16 @@ path = './Data/stock.csv'
 
 #-- Write ticker names of desired stock data --
 identifier = ['AAPL', '^SPX']
-tickers = []
+
 
 #-- Desired interval examined --
 start_date = date(2018,11,7)
-end_date = date(2023,11,7)
+end_date = date(2022,11,7)
 df_end = end_date + timedelta(days=1) #Add one day as yf functions don't include last day
 
 # The following function pulls data from yfinance and builds the database
 def update_data():
-
+    tickers = []    
     # Creates the yf ticker objects for each identifier entered in "identifier"
     for i in identifier:           
         tickers.append(yf.Ticker(i))
@@ -54,7 +54,6 @@ else:
     df = pd.read_csv(path, parse_dates=['Date'])
     df.index = df.Date.dt.date
     df = df.drop(columns=['Date'])
-
 
 
 S = df.at[end_date,'^SPX']
