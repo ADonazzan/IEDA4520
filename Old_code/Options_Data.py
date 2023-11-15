@@ -5,13 +5,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-Update = False # Set to true to update database from online data, update is necessary if following values have been changed
+Update = True # Set to true to update database from online data, update is necessary if following values have been changed
 
 # Set path for data file
 path = './Data/options.csv'
 
 #-- Write ticker names of desired options data --
-identifiers = 'fb aapl amzn nflx goog'
+identifiers = '^spx aapl amzn nflx goog'
 
 
 def update_data():

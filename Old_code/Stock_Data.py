@@ -7,11 +7,11 @@ import Price_Models as pm
 
 Update = False # Set to true to update database from online data, update is necessary if following values have been changed
 
-#Set path for data file
-path = './Data/stock.csv'
+#Set stock_path for data file
+stock_path = './Data/stock.csv'
 
 #-- Write ticker names of desired stock data --
-identifier = ['AAPL', '^SPX']
+stock_identifier = ['AAPL', '^SPX']
 
 
 #-- Desired interval examined --
@@ -20,10 +20,10 @@ end_date = date(2022,11,7)
 df_end = end_date + timedelta(days=1) #Add one day as yf functions don't include last day
 
 # The following function pulls data from yfinance and builds the database
-def update_data():
+def update_stock():
     tickers = []    
-    # Creates the yf ticker objects for each identifier entered in "identifier"
-    for i in identifier:           
+    # Creates the yf ticker objects for each stock_identifier entered in "stock_identifier"
+    for i in stock_identifier:           
         tickers.append(yf.Ticker(i))
 
     # vars()[i] = yf.Ticker(i)  # Use function to create single variables for each ticker
@@ -31,27 +31,27 @@ def update_data():
     df = tickers[0].history(start = start_date,end = df_end)[['Close']] 
     df = df.drop(columns=['Close'])
 
-    #-- Populates dataframe with data from all the identifiers entered in "identifier" --
+    #-- Populates dataframe with data from all the stock_identifiers entered in "stock_identifier" --
     for i in range(len(tickers)):
         stock = tickers[i]
         temp_data = stock.history(start = start_date,end = df_end)[['Close']]
-        df[identifier[i]] = temp_data
+        df[stock_identifier[i]] = temp_data
 
     # Polishing date format...
     df = df.reset_index() 
     df.index = df.Date.dt.date
     df = df.drop(columns=['Date'])
     # Export to CSV
-    df.to_csv(path)
+    df.to_csv(stock_path)
 
     return df
 
 
 # Calls function to update database or loads old database
 if Update == True:
-    df = update_data()
+    df = update_stock()
 else:
-    df = pd.read_csv(path, parse_dates=['Date'])
+    df = pd.read_csv(stock_path, parse_dates=['Date'])
     df.index = df.Date.dt.date
     df = df.drop(columns=['Date'])
 
