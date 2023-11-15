@@ -7,13 +7,12 @@ np.random.seed(1) # for reproducibility
 
 # define the number of simulations and time steps
 M = 10  # number of simulations
-N = 10
+#N = 10
 
 def LSMC_put(S0, K, T, sigma, r):
     # generate the stock price paths
-    #N = int(np.floor(T*252)) #Time steps with trading days
+    N = int(np.floor(T*252)) #Time steps with trading days
     dt = T / N
-    t = np.linspace(0, T, N+1)
     z = np.random.randn(M, N)
     S = np.zeros((M, N+1))
     S[:,0] = S0
@@ -52,7 +51,7 @@ def LSMC_put(S0, K, T, sigma, r):
 
 def LSMC_call(S0, K, T, sigma, r):
     # generate the stock price paths
-    #N = int(np.floor(T*252)) #Time steps with trading days
+    N = int(np.floor(T*252)) #Time steps with trading days
     dt = T / N
     t = np.linspace(0, T, N+1)
     z = np.random.randn(M, N)

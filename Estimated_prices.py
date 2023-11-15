@@ -1,4 +1,5 @@
 from datetime import date, timedelta, datetime
+from tqdm import tqdm
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,14 +20,16 @@ df_end = end_date + timedelta(days=1) #Add one day as yf functions don't include
 df = Data.GetData(start_date, df_end, trade_days, Update)
 
 stock = '^SPX'
-r = 0.1
+r = 0.0553
 sim_price = []
 
 df = df[df['symbol'] != stock]
 
-est_price = [] 
+LSMC_est_price = [] 
+BIN_est_price = [] 
+
 # iterates through every option in option chain given a certain stock 
-for i in range(len(df)):
+for i in tqdm(range(len(df))):
     S0 = df.iloc[i].S0       # Sets S0
     K = df.iloc[i].strike
     T = df.iloc[i].maturity / 365
@@ -34,9 +37,18 @@ for i in range(len(df)):
     type = df.iloc[i].optionType
 
     computed_price_LSMC = LSMC.LSMC(S0, K, T, sigma, r, type)
+    computed_price_BIN = pm.BinomialTree(S0, K, T, sigma, r, type)
 
-    est_price.append(computed_price_LSMC)
-    
-df = df.assign(est_price = est_price)
+    LSMC_est_price.append(computed_price_LSMC)
+    BIN_est_price.append(computed_price_BIN)
+
+LSMC_perc_error = (df.lastPrice - LSMC_est_price)/df.lastPrice
+BIN_perc_error = (df.lastPrice - BIN_est_price)/df.lastPrice
+
+df = df.assign(LSMC_est_price = LSMC_est_price)
+df = df.assign(LSMC_perc_error = LSMC_perc_error)
+df = df.assign(BIN_est_price = BIN_est_price)
+df = df.assign(BIN_perc_error = BIN_perc_error)
+
 
 df.to_csv(est_price_path)

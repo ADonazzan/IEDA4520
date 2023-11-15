@@ -37,8 +37,6 @@ def update_stock(start_date, df_end):
     df = df.reset_index() 
     df.index = df.Date.dt.date
     df = df.drop(columns=['Date'])
-    # Export to CSV
-    df.to_csv(stock_path)
 
     return df
 
@@ -78,7 +76,7 @@ def getoptions(update = False):
     df.to_csv(option_path)
     return df
 
-
+print(getoptions(True))
 def getstock(start_date, df_end, update = False):
     if update == True:
         df = update_stock(start_date, df_end)
@@ -90,5 +88,39 @@ def getstock(start_date, df_end, update = False):
         #Select date interval
         df = df[df.index >= start_date]
         df = df[df.index < df_end]
+
+    # Export to CSV
+    df.to_csv(stock_path)
     return df
+
+def GetData(start_date, df_end, trade_days, Update):
+    # Get data from Data file
+    df_stock = getstock(start_date, df_end, Update)
+    df_options = getoptions(Update)
+
+    # Add maturity column to options database
+    maturity = (pd.to_datetime(df_options['expiration']) - pd.to_datetime(df_options['lastTradeDate'])).dt.days
+    df_options = df_options.assign(maturity = maturity)
+
+    # Create long version of stock database
+    df_stock_long = df_stock.reset_index()
+    df_stock_long = pd.melt(df_stock_long,id_vars='Date',var_name ='stock_name', value_name ='S0')
+
+    # Create Volatility column for dataframe
+    stock_names = df_stock_long['stock_name'].unique()
+    volatility = []
+
+    for i in stock_names:
+        stock_series = df_stock_long[df_stock_long['stock_name'] == i]['S0']
+        log_ret = np.log(stock_series) - np.log(stock_series.shift(1))
+        daily_std = log_ret.expanding().std()
+        annual_std = daily_std.array * np.sqrt(trade_days)
+        volatility.extend(annual_std)
+
+    df_stock_long['sigma'] = volatility
+
+    # Merge databases
+    df_merged = pd.merge(df_options.reset_index(), df_stock_long, left_on =['symbol','lastTradeDate'], right_on=['stock_name','Date'])
+    df_merged = df_merged.drop(columns=['Date','stock_name'])
+    return df_merged
 
