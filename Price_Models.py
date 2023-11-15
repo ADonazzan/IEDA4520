@@ -4,12 +4,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def BS(S_0, r, sigma, T, nSteps, nPaths = 1000):
+nPaths = 10
+
+def BS_path(S_0, r, sigma, T):
     """
     Returns [nPaths, nSteps] matrix of nPaths paths of stock price following Black Scholes Model.
     :int T: Number of years the simulation lasts
     """
-
+    nSteps = int(np.floor(T*252)) #Time steps with trading days
     delta_i = T/nSteps
     X = np.zeros((nPaths, nSteps+1))      #Create a null matrix of size nPaths, nSteps
     X[:,0] = S_0                          #Set entries on first column to S_0
@@ -21,37 +23,41 @@ def BS(S_0, r, sigma, T, nSteps, nPaths = 1000):
         X[:,i+1] = X[:,i]*np.exp((r-0.5*(sigma**2))*(delta_i)+sigma*np.sqrt(delta_i)*Z)
     return X
 
-def eu_call_price(S0, K, T, r, sigma, nSteps):
+def BS_call_price(S0, K, T, r, sigma):
     """
     Returns european call option price following Black Scholes Model.
     """
-    X = BS(S0, r, sigma, T, nSteps)
+    X = BS_path(S0, r, sigma, T)
     S = np.mean(X[:,-1])
     Price = np.exp(-r*T)*max(0,S0-K)
-
-    # ---- Uncomment to plot results -------
-    #for i in range(len(X[:,0])):
-    #    plt.plot(range(len(X[1])),X[i])
-    #plt.show()
-
     return Price
 
-# Uncomment to test
-# print(eu_call_price(100,1,1,0.05,100, 0.4))
-def eu_put_price(S0, K, T, r, sigma, nSteps):
+def BS_put_price(S0, K, T, r, sigma):
     """
     Returns european call option price following Black Scholes Model.
     """
-    X = BS(S0, r, sigma, T, nSteps)
+    X = BS_path(S0, r, sigma, T)
     S = np.mean(X[:,-1])
     Price = np.exp(-r*T)*max(0,K-S0)
-
-    # ---- Uncomment to plot results -------
-    #for i in range(len(X[:,0])):
-    #    plt.plot(range(len(X[1])),X[i])
-    #plt.show()
-
     return Price
+
+def BS(S0, K, T, sigma, r, type):
+    """
+    S0 = stock price at first day
+    K = strike
+    T = time in years
+    sigma = sigma
+    r = risk free rate
+    type = call/put
+    """
+    if type == "puts":
+        price = BS_put_price(S0, K, T, sigma, r)
+    elif type == "calls":
+        price = BS_call_price(S0, K, T, sigma, r)
+    else:
+        raise Exception("Unexpected input")
+    
+    return price
 
 
 '''
