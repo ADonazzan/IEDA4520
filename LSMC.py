@@ -2,12 +2,8 @@ import numpy as np
 from scipy.stats import norm
 import pandas as pd
 
-
-np.random.seed(1) # for reproducibility 
-
 # define the number of simulations and time steps
 M = 10  # number of simulations
-#N = 10
 
 def LSMC_put(S0, K, T, sigma, r):
     # generate the stock price paths

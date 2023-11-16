@@ -14,6 +14,7 @@ stock_identifier = ['^SPX', 'AAPL', 'AMZN', 'NFLX', 'GOOG']
 #-- Set paths for data files
 stock_path = './Data/stock.csv'
 option_path = './Data/options.csv'
+merged_path = './Data/tmp.csv'
 
 # The following function pulls data from yfinance and builds the stock database
 def update_stock(start_date, df_end):
@@ -76,7 +77,6 @@ def getoptions(update = False):
     df.to_csv(option_path)
     return df
 
-print(getoptions(True))
 def getstock(start_date, df_end, update = False):
     if update == True:
         df = update_stock(start_date, df_end)
@@ -122,5 +122,7 @@ def GetData(start_date, df_end, trade_days, Update):
     # Merge databases
     df_merged = pd.merge(df_options.reset_index(), df_stock_long, left_on =['symbol','lastTradeDate'], right_on=['stock_name','Date'])
     df_merged = df_merged.drop(columns=['Date','stock_name'])
+
+    df_merged.to_csv(merged_path)
     return df_merged
 

@@ -10,7 +10,7 @@ import LSMC
 # Set to true to update database from online data, if false will pull data from csv files
 Update = False 
 trade_days = 256
-est_price_path = './Data/est_prices.csv'
+est_price_path = './Data/est_BS.csv'
 
 #-- Desired interval examined --
 start_date = date(2018,11,7)
@@ -21,12 +21,13 @@ df = Data.GetData(start_date, df_end, trade_days, Update)
 
 stock = '^SPX'
 r = 0.0553
-sim_price = []
 
-df = df[df['symbol'] != stock]
+df = df[df['symbol'] == stock]
 
 LSMC_est_price = [] 
 BIN_est_price = [] 
+BS_est_price = [] 
+MJD_est_price = []
 
 # iterates through every option in option chain given a certain stock 
 for i in tqdm(range(len(df))):
@@ -36,19 +37,29 @@ for i in tqdm(range(len(df))):
     sigma = df.iloc[i].sigma
     type = df.iloc[i].optionType
 
-    computed_price_LSMC = LSMC.LSMC(S0, K, T, sigma, r, type)
-    computed_price_BIN = pm.BinomialTree(S0, K, T, sigma, r, type)
+    # computed_price_LSMC = LSMC.LSMC(S0, K, T, sigma, r, type)
+    # computed_price_BIN = pm.BinomialTree(S0, K, T, sigma, r, type)
+    computed_price_BS = pm.BS(S0, K, T, sigma, r, type)
+    computed_price_MJD = pm.MJD(S0, K, T, sigma, r, type)
+    
 
-    LSMC_est_price.append(computed_price_LSMC)
-    BIN_est_price.append(computed_price_BIN)
+    # LSMC_est_price.append(computed_price_LSMC)
+    # BIN_est_price.append(computed_price_BIN)
+    BS_est_price.append(computed_price_BS)
+    MJD_est_price.append(computed_price_MJD)
 
-LSMC_perc_error = (df.lastPrice - LSMC_est_price)/df.lastPrice
-BIN_perc_error = (df.lastPrice - BIN_est_price)/df.lastPrice
+# LSMC_perc_error = (df.lastPrice - LSMC_est_price)/df.lastPrice
+# BIN_perc_error = (df.lastPrice - BIN_est_price)/df.lastPrice
+BS_perc_error = (df.lastPrice - BS_est_price)/df.lastPrice
+MJD_perc_error = (df.lastPrice - MJD_est_price)/df.lastPrice
 
-df = df.assign(LSMC_est_price = LSMC_est_price)
-df = df.assign(LSMC_perc_error = LSMC_perc_error)
-df = df.assign(BIN_est_price = BIN_est_price)
-df = df.assign(BIN_perc_error = BIN_perc_error)
-
+# df = df.assign(LSMC_est_price = LSMC_est_price)
+# df = df.assign(LSMC_perc_error = LSMC_perc_error)
+# df = df.assign(BIN_est_price = BIN_est_price)
+# df = df.assign(BIN_perc_error = BIN_perc_error)
+df = df.assign(BS_est_price = BS_est_price)
+df = df.assign(BS_perc_error=BS_perc_error)
+df = df.assign(MJD_est_price = MJD_est_price)
+df = df.assign(MJD_perc_error=MJD_perc_error)
 
 df.to_csv(est_price_path)

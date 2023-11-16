@@ -34,6 +34,7 @@ for i in range(len(df)):
     type = df.iloc[i].optionType
 
     computed_price_LSMC = LSMC.LSMC(S0, K, T, sigma, r, type)
+    computed_price_ = pm.Merton_J_D(S0, K, T, sigma, r, type)
 
     est_price.append(computed_price_LSMC)
     
