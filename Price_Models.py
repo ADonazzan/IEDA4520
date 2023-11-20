@@ -24,26 +24,6 @@ def BS_path(S_0, r, sigma, T, nSteps):
         X[:,i+1] = X[:,i]*np.exp((r-0.5*(sigma**2))*(delta_i)+sigma*np.sqrt(delta_i)*Z)
     return X
 
-def BS_call_price(S0, K, T, r, sigma):
-    """
-    Returns european call option price following Black Scholes Model.
-    """
-    nSteps = int(np.ceil(T*252)) #Time steps with trading days
-    X = BS_path(S0, r, sigma, T, nSteps)
-    S = np.mean(X[:,-1])
-    Price = np.exp(-r*T)*max(0,S-K)
-    return Price
-
-def BS_put_price(S0, K, T, r, sigma):
-    """
-    Returns european call option price following Black Scholes Model.
-    """
-    nSteps = int(np.ceil(T*252)) #Time steps with trading days
-    X = BS_path(S0, r, sigma, T, nSteps)
-    S = np.mean(X[:,-1])
-    Price = np.exp(-r*T)*max(0,K-S)
-    return Price
-
 def BS(S0, K, T, sigma, r, type):
     """
     S0 = stock price at first day
@@ -53,24 +33,24 @@ def BS(S0, K, T, sigma, r, type):
     r = risk free rate
     type = call/put
     """
+    nSteps = int(np.ceil(T*252)) #Time steps with trading days
+    X = BS_path(S0, r, sigma, T, nSteps)
+    S = np.mean(X[:,-1])
     if type == "puts":
-        price = BS_put_price(S0, K, T, sigma, r)
+        Price = np.exp(-r*T)*max(0,K-S)
     elif type == "calls":
-        price = BS_call_price(S0, K, T, sigma, r)
+        Price = np.exp(-r*T)*max(0,S-K)
     else:
         raise Exception("Unexpected input")
-    
-    return price
+    return Price
 
-
-'''
-----------------------------------------
-Binomial Tree model for american options
-----------------------------------------
-'''
 def BinomialTree(S0, K, T, sigma, r, type):
-
-    N = int(np.floor(T*252)) #Time steps with trading days
+    '''
+    ----------------------------------------
+    Binomial Tree model for american options
+    ----------------------------------------
+    '''
+    N = int(np.ceil(T*252)) #Time steps with trading days
     dt = T / N
     u = np.exp(sigma*np.sqrt(dt))
     d = 1 / u
@@ -99,12 +79,12 @@ def BinomialTree(S0, K, T, sigma, r, type):
     
     return option_tree[0, 0]
 
-'''
----------------------------
-Merton Jump Diffusion Model
----------------------------
-'''
 def MertonJD(S0, r, sigma, T, nSteps, lamb = 0.25, a = 0.2, b = 0.2):
+    '''
+    ---------------------------
+    Merton Jump Diffusion Model
+    ---------------------------
+    '''
     T_vec, dt = np.linspace(0, T, nSteps+1, retstep = True)
     S_arr = np.zeros([nPaths, nSteps+1])
     S_arr[:,0] = S0
@@ -136,17 +116,16 @@ def MJD(S0, K, T, sigma, r, type):
     
     return price
 
-'''
----------------------------
-Least Squares Monte Carlo Model
----------------------------
-'''
-# define the number of simulations and time steps
 M = nPaths  # number of simulations
 
 def LSMC_put(S0, K, T, sigma, r):
+    '''
+    ---------------------------
+    Least Squares Monte Carlo Model
+    ---------------------------
+    '''
     # generate the stock price paths
-    N = int(np.floor(T*252)) #Time steps with trading days
+    N = int(np.ceil(T*252)) #Time steps with trading days
     dt = T / N
     z = np.random.randn(M, N)
     S = np.zeros((M, N+1))
@@ -186,7 +165,7 @@ def LSMC_put(S0, K, T, sigma, r):
 
 def LSMC_call(S0, K, T, sigma, r):
     # generate the stock price paths
-    N = int(np.floor(T*252)) #Time steps with trading days
+    N = int(np.ceil(T*252)) #Time steps with trading days
     dt = T / N
     t = np.linspace(0, T, N+1)
     z = np.random.randn(M, N)

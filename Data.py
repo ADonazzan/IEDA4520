@@ -1,6 +1,6 @@
 import yfinance as yf
 from yahooquery import Ticker
-# from datetime import date, timedelta
+from datetime import date, timedelta
 import pandas as pd
 import numpy as np
 
@@ -21,7 +21,8 @@ df_methods = pd.DataFrame({'symbol': stock_identifier, 'method': methods})
 #-- Set paths for data files
 stock_path = './Data/stock.csv'
 option_path = './Data/options.csv'
-old_option_path = './Data/options_1511.csv'
+old_option_path1 = './Data/options_1511.csv'
+old_option_path2 = './Data/options_1611.csv'
 merged_path = './Data/tmp.csv'
 
 # The following function pulls data from yfinance and builds the stock database
@@ -80,14 +81,16 @@ def getoptions(update = False, OldOptions = False):
     elif OldOptions == False:
         df = pd.read_csv(option_path,index_col=[0,1])
     elif OldOptions == True:
-        df1 = pd.read_csv(option_path)
-        df2 = pd.read_csv(old_option_path)
+        df1 = pd.read_csv(old_option_path1)
+        df2 = pd.read_csv(old_option_path2)
         df = pd.concat([df1, df2], ignore_index = True)
     #print(df)
     df = df.reset_index()
     df['expiration'] = pd.to_datetime(df["expiration"], format= '%Y-%m-%d').dt.date
     df['lastTradeDate'] = pd.to_datetime(df['lastTradeDate']).dt.date
+    df = df[df.lastTradeDate >= date(2023, 9, 15)]
     df.set_index(['symbol','optionType'], inplace=True)  
+    print(len(df))
     df.to_csv(option_path)
     return df
 
