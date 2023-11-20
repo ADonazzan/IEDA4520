@@ -1,19 +1,27 @@
 import yfinance as yf
 from yahooquery import Ticker
-from datetime import date, timedelta
+# from datetime import date, timedelta
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import Price_Models as pm
 
 #-- Write ticker names of desired options data --
-options_identifiers = '^SPX AAPL AMZN NFLX GOOG'
+options_identifiers = '^SPX ^NDX ^RUT ^VIX AAPL AMZN NFLX GOOG TSLA MSFT META'
 #-- Write ticker names of desired stock data --
-stock_identifier = ['^SPX', 'AAPL', 'AMZN', 'NFLX', 'GOOG']
+stock_identifier = ['^SPX', '^VIX', '^NDX', '^RUT',  'AAPL', 'AMZN', 'NFLX', 'GOOG', 'TSLA', 'MSFT', 'META']
+
+# OPTIONS WITH EXISTING DATA: ^NDX, ^RUT, ^VIX, 
+# Stocks tickers: , 'NKE', 'MCD', 'V', 'JPM', 'MS', 'GS', 'BAC'
+#NKE MCD V JPM MS GS BAC'
+# , 'A','A', 'A', 'A', 'A','A', 'A'
+
+#-- Write option methods (American = 'A', European = 'E')
+methods = ['E','E','E', 'E', 'A', 'A', 'A', 'A','A', 'A', 'A']
+df_methods = pd.DataFrame({'symbol': stock_identifier, 'method': methods})
 
 #-- Set paths for data files
 stock_path = './Data/stock.csv'
 option_path = './Data/options.csv'
+old_option_path = './Data/options_1511.csv'
 merged_path = './Data/tmp.csv'
 
 # The following function pulls data from yfinance and builds the stock database
@@ -32,6 +40,8 @@ def update_stock(start_date, df_end):
     for i in range(len(tickers)):
         stock = tickers[i]
         temp_data = stock.history(start = start_date,end = df_end)[['Close']]
+        temp_data = temp_data[:1265]
+        temp_data = temp_data.set_index(df.index)
         df[stock_identifier[i]] = temp_data
 
     # Polishing date format...
@@ -64,12 +74,16 @@ def update_options():
     return df2
 
 
-def getoptions(update = False):
+def getoptions(update = False, OldOptions = False):
     if update == True:
         df = update_options()
-    else:
+    elif OldOptions == False:
         df = pd.read_csv(option_path,index_col=[0,1])
-
+    elif OldOptions == True:
+        df1 = pd.read_csv(option_path)
+        df2 = pd.read_csv(old_option_path)
+        df = pd.concat([df1, df2], ignore_index = True)
+    #print(df)
     df = df.reset_index()
     df['expiration'] = pd.to_datetime(df["expiration"], format= '%Y-%m-%d').dt.date
     df['lastTradeDate'] = pd.to_datetime(df['lastTradeDate']).dt.date
@@ -93,10 +107,10 @@ def getstock(start_date, df_end, update = False):
     df.to_csv(stock_path)
     return df
 
-def GetData(start_date, df_end, trade_days, Update):
+def GetData(start_date, df_end, trade_days, Update, OldOptions = False):
     # Get data from Data file
     df_stock = getstock(start_date, df_end, Update)
-    df_options = getoptions(Update)
+    df_options = getoptions(Update, OldOptions)
 
     # Add maturity column to options database
     maturity = (pd.to_datetime(df_options['expiration']) - pd.to_datetime(df_options['lastTradeDate'])).dt.days
@@ -109,6 +123,7 @@ def GetData(start_date, df_end, trade_days, Update):
     # Create Volatility column for dataframe
     stock_names = df_stock_long['stock_name'].unique()
     volatility = []
+    returns = []
 
     for i in stock_names:
         stock_series = df_stock_long[df_stock_long['stock_name'] == i]['S0']
@@ -117,11 +132,19 @@ def GetData(start_date, df_end, trade_days, Update):
         annual_std = daily_std.array * np.sqrt(trade_days)
         volatility.extend(annual_std)
 
+        daily_ret = log_ret.expanding().mean()
+        annual_ret = (1+daily_ret)**trade_days
+        continuous_ret = np.log(annual_ret)
+        returns.extend(continuous_ret)
+
     df_stock_long['sigma'] = volatility
+    df_stock_long['returns'] = returns    
 
     # Merge databases
     df_merged = pd.merge(df_options.reset_index(), df_stock_long, left_on =['symbol','lastTradeDate'], right_on=['stock_name','Date'])
     df_merged = df_merged.drop(columns=['Date','stock_name'])
+
+    df_merged = pd.merge(df_merged, df_methods, left_on =['symbol'], right_on=['symbol'])
 
     df_merged.to_csv(merged_path)
     return df_merged

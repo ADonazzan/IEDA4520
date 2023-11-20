@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import Price_Models as pm
 import Data
-import LSMC
+import Old_code.LSMC as LSMC
 
 # Set to true to update database from online data, if false will pull data from csv files
 Update = False 

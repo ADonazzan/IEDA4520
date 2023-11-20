@@ -1,6 +1,8 @@
 import numpy as np
 import math
 from scipy.stats import norm
+import yfinance as yf
+from yahooquery import Ticker
 """..."""
 
 fake_data = []
@@ -34,12 +36,11 @@ for i in range(256):
     z_i = np.random.normal(0, 5)
     S.append(30+z_i)
 
-print(S)
 
+tickers = ["^IXIC", '^NYA', '^XAX', '^BUK100P', '^FTSE', "^RUT", '^GDAXI', '^FCHI', '^N100', '^NDX', '^RUT', '^VIX' ]
+for i in tickers:
 
-for i in range(256):
-    T = (256-i)/365
-    # S = fetch price at timestep T
-    # K is the same
-    # Do we update volatility daily? and do we update risk free rate daily?
-    print("Option price is: ", round(BS(S[i], 30, 0.03, 0.20, T, "Call"), 10), "$ |", "stock price", round(S[i], 3), "| at time left to expiration", round(T, 3))
+    ticker = Ticker(i)
+    df = ticker.option_chain
+
+    print(df)
