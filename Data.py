@@ -15,7 +15,7 @@ stock_identifier = ['^SPX', '^VIX', '^NDX', '^RUT',  'AAPL', 'AMZN', 'NFLX', 'GO
 # , 'A','A', 'A', 'A', 'A','A', 'A'
 
 #-- Write option methods (American = 'A', European = 'E')
-methods = ['E','E','E', 'E', 'A', 'A', 'A', 'A','A', 'A', 'A']
+methods = ['E','E','E', 'E', 'A', 'A', 'A', 'A', 'A', 'A', 'A']
 df_methods = pd.DataFrame({'symbol': stock_identifier, 'method': methods})
 
 #-- Set paths for data files
@@ -23,7 +23,7 @@ stock_path = './Data/stock.csv'
 option_path = './Data/options.csv'
 old_option_path1 = './Data/options_1511.csv'
 old_option_path2 = './Data/options_1611.csv'
-merged_path = './Data/tmp.csv'
+merged_path = './Data/merged.csv'
 
 # The following function pulls data from yfinance and builds the stock database
 def update_stock(start_date, df_end):
@@ -32,7 +32,6 @@ def update_stock(start_date, df_end):
     for i in stock_identifier:           
         tickers.append(yf.Ticker(i))
 
-    # vars()[i] = yf.Ticker(i)  # Use function to create single variables for each ticker
     #-- Create dataframe with the trading dates in the interval --
     df = tickers[0].history(start = start_date,end = df_end)[['Close']] 
     df = df.drop(columns=['Close'])
@@ -41,7 +40,7 @@ def update_stock(start_date, df_end):
     for i in range(len(tickers)):
         stock = tickers[i]
         temp_data = stock.history(start = start_date,end = df_end)[['Close']]
-        temp_data = temp_data[:1265]
+        temp_data = temp_data[:1267]
         temp_data = temp_data.set_index(df.index)
         df[stock_identifier[i]] = temp_data
 
@@ -52,6 +51,21 @@ def update_stock(start_date, df_end):
 
     return df
 
+def getstock(start_date, df_end, update = False):
+    if update == True:
+        df = update_stock(start_date, df_end)
+    else:
+        df = pd.read_csv(stock_path, parse_dates=['Date'])
+        df.index = df.Date.dt.date
+        df = df.drop(columns=['Date'])
+
+        #Select date interval
+        df = df[df.index >= start_date]
+        df = df[df.index < df_end]
+
+    # Export to CSV
+    df.to_csv(stock_path)
+    return df
 
 # The following function pulls data from yahooquery and builds the options database
 def update_options():
@@ -74,12 +88,13 @@ def update_options():
         raise Exception("Unexpected currency found.")
     return df2
 
-
 def getoptions(update = False, OldOptions = False):
     if update == True:
         df = update_options()
+        if OldOptions == True:
+            raise Exception('OldOptions cannot be set to True when update is True')
     elif OldOptions == False:
-        df = pd.read_csv(option_path,index_col=[0,1])
+        df = pd.read_csv(option_path,index_col=[0,2])
     elif OldOptions == True:
         df1 = pd.read_csv(old_option_path1)
         df2 = pd.read_csv(old_option_path2)
@@ -88,26 +103,9 @@ def getoptions(update = False, OldOptions = False):
     df = df.reset_index()
     df['expiration'] = pd.to_datetime(df["expiration"], format= '%Y-%m-%d').dt.date
     df['lastTradeDate'] = pd.to_datetime(df['lastTradeDate']).dt.date
-    df = df[df.lastTradeDate >= date(2023, 9, 15)]
     df.set_index(['symbol','optionType'], inplace=True)  
-    print(len(df))
+    #print(len(df))
     df.to_csv(option_path)
-    return df
-
-def getstock(start_date, df_end, update = False):
-    if update == True:
-        df = update_stock(start_date, df_end)
-    else:
-        df = pd.read_csv(stock_path, parse_dates=['Date'])
-        df.index = df.Date.dt.date
-        df = df.drop(columns=['Date'])
-
-        #Select date interval
-        df = df[df.index >= start_date]
-        df = df[df.index < df_end]
-
-    # Export to CSV
-    df.to_csv(stock_path)
     return df
 
 def GetData(start_date, df_end, trade_days, Update, OldOptions = False):

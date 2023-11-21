@@ -9,7 +9,7 @@ import Data
 
 def getdata(OldData = False):
     # Set to true to update database from online data, if false will pull data from csv files
-    Update = False 
+    Update = False
     trade_days = 256
     est_price_path = './Data/tmp.csv'
 

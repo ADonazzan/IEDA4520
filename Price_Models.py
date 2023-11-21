@@ -2,13 +2,12 @@ import numpy as np
 import scipy.stats as stats
 
 nPaths = 1000
-
 '''
 ----------------------------------------
 Black Scholes model for european options
 ----------------------------------------
 '''
-def BS_path(S_0, r, sigma, T, nSteps):
+def BS_path(S_0, r, sigma, T, nSteps, nPaths = nPaths):
     """
     Returns [nPaths, nSteps] matrix of nPaths paths of stock price following Black Scholes Model.
     :int T: Number of years the simulation lasts
@@ -35,11 +34,11 @@ def BS(S0, K, T, sigma, r, type):
     """
     nSteps = int(np.ceil(T*252)) #Time steps with trading days
     X = BS_path(S0, r, sigma, T, nSteps)
-    S = np.mean(X[:,-1])
+
     if type == "puts":
-        Price = np.exp(-r*T)*max(0,K-S)
+        Price = np.mean(np.exp(-r*T)*np.maximum(0,K-X[:,-1]))
     elif type == "calls":
-        Price = np.exp(-r*T)*max(0,S-K)
+        Price = np.mean(np.exp(-r*T)*np.maximum(0,X[:,-1]-K))
     else:
         raise Exception("Unexpected input")
     return Price
@@ -53,7 +52,7 @@ def BinomialTree(S0, K, T, sigma, r, type):
     N = int(np.ceil(T*252)) #Time steps with trading days
     dt = T / N
     u = np.exp(sigma*np.sqrt(dt))
-    d = 1 / u
+    d = np.exp(-sigma*np.sqrt(dt))
     q = (np.exp(r*dt) - d) / (u - d)
 
     stock_tree = np.zeros((N+1, N+1))
@@ -74,12 +73,16 @@ def BinomialTree(S0, K, T, sigma, r, type):
             raise Exception("Unexpected input, please try again")
     
     for i in range(N-1, -1, -1):
-        for j in range(i+1):
-            option_tree[i, j] = np.exp(r*dt) * (q * option_tree[i+1, j] + (1-q) * option_tree[i+1, j+1])
+        if type == "calls":
+            for j in range(i+1):
+                option_tree[i, j] = max(np.exp(r*dt) * (q * option_tree[i+1, j] + (1-q) * option_tree[i+1, j+1]), stock_tree[i, j] - K)
+        elif type == "puts":
+            for j in range(i+1):
+                option_tree[i, j] = max(np.exp(r*dt) * (q * option_tree[i+1, j] + (1-q) * option_tree[i+1, j+1]), K - stock_tree[i, j])
     
     return option_tree[0, 0]
 
-def MertonJD(S0, r, sigma, T, nSteps, lamb = 0.25, a = 0.2, b = 0.2):
+def MertonJD(S0, r, sigma, T, nSteps, lamb = 0.075, a = -0.1, b = 0.05):
     '''
     ---------------------------
     Merton Jump Diffusion Model
@@ -106,19 +109,18 @@ def MJD(S0, K, T, sigma, r, type):
     """
     nSteps = int(np.ceil(T*252)) #Time steps with trading days
     X = MertonJD(S0, r, sigma, T, nSteps)
-    S = np.mean(X[:,-1])
+    
     if type == "puts":
-        price = np.exp(-r*T)*max(0,K-S)
+        Price = np.mean(np.exp(-r*T)*np.maximum(0,K-X[:,-1]))
     elif type == "calls":
-        price = np.exp(-r*T)*max(0,S-K)
+        Price = np.mean(np.exp(-r*T)*np.maximum(0,X[:,-1]-K))
     else:
         raise Exception("Unexpected input")
-    
-    return price
+    return Price
 
 M = nPaths  # number of simulations
 
-def LSMC_put(S0, K, T, sigma, r):
+def LSMC_put(S_0, K, T, sigma, r):
     '''
     ---------------------------
     Least Squares Monte Carlo Model
@@ -127,11 +129,13 @@ def LSMC_put(S0, K, T, sigma, r):
     # generate the stock price paths
     N = int(np.ceil(T*252)) #Time steps with trading days
     dt = T / N
-    z = np.random.randn(M, N)
-    S = np.zeros((M, N+1))
-    S[:,0] = S0
-    for i in range(1, N+1):
-        S[:,i] = S[:,i-1] * np.exp((r - 0.5*sigma**2)*dt + sigma*np.sqrt(dt)*z[:,i-1])
+    # z = np.random.randn(M, N)
+    # S = np.zeros((M, N+1))
+    # S[:,0] = S_0
+    # for i in range(1, N+1):
+    #     S[:,i] = S[:,i-1] * np.exp((r - 0.5*sigma**2)*dt + sigma*np.sqrt(dt)*z[:,i-1])
+
+    S = BS_path(S_0, r, sigma, T, N, nPaths = M)
 
     payoff = np.maximum(K - S, 0)
 
@@ -163,16 +167,11 @@ def LSMC_put(S0, K, T, sigma, r):
     return exp_payoff
 
 
-def LSMC_call(S0, K, T, sigma, r):
+def LSMC_call(S_0, K, T, sigma, r):
     # generate the stock price paths
     N = int(np.ceil(T*252)) #Time steps with trading days
     dt = T / N
-    t = np.linspace(0, T, N+1)
-    z = np.random.randn(M, N)
-    S = np.zeros((M, N+1))
-    S[:,0] = S0
-    for i in range(1, N+1):
-        S[:,i] = S[:,i-1] * np.exp((r - 0.5*sigma**2)*dt + sigma*np.sqrt(dt)*z[:,i-1])
+    S = BS_path(S_0, r, sigma, T, N, nPaths = M)
 
     payoff = np.maximum(S - K, 0)
 

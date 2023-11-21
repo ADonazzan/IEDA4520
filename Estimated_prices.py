@@ -7,25 +7,26 @@ import Price_Models as pm
 import Data
 
 # Set to true to update database from online data, if false will pull data from csv files
-Update = True 
+Update = False 
 trade_days = 256
 est_price_path = './Data/est_prices.csv'
 
 #-- Desired interval examined --
 start_date = date(2018,11,7)
-end_date = date(2023,11,16)
+end_date = datetime.today()
 df_end = end_date + timedelta(days=1) #Add one day as yf functions don't include last day
+df_end = df_end.date()
 
 # Importing data
 df = Data.GetData(start_date, df_end, trade_days, Update)
-#df = df.sample(100)  #Reduce data size for testing purposes
+df = df[df.lastTradeDate >= date(2023, 11, 18)]
+#df = df.sample(1000)  #Reduce data size for testing purposes
 
-r = 0.0553
+r = 0.0533
 
 # Uncomment to select only one stock
 # stock = '^SPX'
 # df = df[df['symbol'] == stock]
-
 
 
 LSMC_est_price = [] 
@@ -48,7 +49,7 @@ for i in tqdm(range(len(df))):
         computed_price_MJD = np.nan
     elif df.iloc[i].method == 'E':
         computed_price_LSMC = np.nan
-        computed_price_BIN = np.nan     
+        computed_price_BIN = np.nan   
         computed_price_BS = pm.BS(S0, K, T, sigma, r, type)
         computed_price_MJD = pm.MJD(S0, K, T, sigma, r, type)
     else:
