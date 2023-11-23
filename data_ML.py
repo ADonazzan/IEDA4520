@@ -1,6 +1,6 @@
 import yfinance as yf
 from yahooquery import Ticker
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,8 +15,9 @@ def getdata(OldData = False):
 
     #-- Desired interval examined --
     start_date = date(2018,11,7)
-    end_date = date(2023,11,14)
+    end_date = datetime.today()
     df_end = end_date + timedelta(days=1) #Add one day as yf functions don't include last day
+    df_end = df_end.date()
 
     # Importing data
     df = Data.GetData(start_date, df_end, trade_days, Update, OldData)

@@ -23,7 +23,9 @@ stock_path = './Data/stock.csv'
 option_path = './Data/options.csv'
 old_option_path1 = './Data/options_1511.csv'
 old_option_path2 = './Data/options_1611.csv'
+old_option_path3 = './Data/options_2111.csv'
 merged_path = './Data/merged.csv'
+old_merged_path = './Data/old_merged.csv'
 
 # The following function pulls data from yfinance and builds the stock database
 def update_stock(start_date, df_end):
@@ -40,7 +42,7 @@ def update_stock(start_date, df_end):
     for i in range(len(tickers)):
         stock = tickers[i]
         temp_data = stock.history(start = start_date,end = df_end)[['Close']]
-        temp_data = temp_data[:1267]
+        temp_data = temp_data[:1269]
         temp_data = temp_data.set_index(df.index)
         df[stock_identifier[i]] = temp_data
 
@@ -98,7 +100,8 @@ def getoptions(update = False, OldOptions = False):
     elif OldOptions == True:
         df1 = pd.read_csv(old_option_path1)
         df2 = pd.read_csv(old_option_path2)
-        df = pd.concat([df1, df2], ignore_index = True)
+        df3 = pd.read_csv(old_option_path3)
+        df = pd.concat([df1, df2, df3], ignore_index = True)
     #print(df)
     df = df.reset_index()
     df['expiration'] = pd.to_datetime(df["expiration"], format= '%Y-%m-%d').dt.date
@@ -109,6 +112,12 @@ def getoptions(update = False, OldOptions = False):
     return df
 
 def GetData(start_date, df_end, trade_days, Update, OldOptions = False):
+    if Update == False and OldOptions == False:
+        df_merged = pd.read_csv(merged_path)
+        return df_merged
+    if Update == False and OldOptions == True:
+        df_merged = pd.read_csv(old_merged_path)
+        return df_merged
     # Get data from Data file
     df_stock = getstock(start_date, df_end, Update)
     df_options = getoptions(Update, OldOptions)
@@ -126,6 +135,7 @@ def GetData(start_date, df_end, trade_days, Update, OldOptions = False):
     volatility = []
     returns = []
 
+    # Compute log returns and volatility for stock
     for i in stock_names:
         stock_series = df_stock_long[df_stock_long['stock_name'] == i]['S0']
         log_ret = np.log(stock_series) - np.log(stock_series.shift(1))
@@ -141,12 +151,14 @@ def GetData(start_date, df_end, trade_days, Update, OldOptions = False):
     df_stock_long['sigma'] = volatility
     df_stock_long['returns'] = returns    
 
-    # Merge databases
+    # Merge stock and options databases
     df_merged = pd.merge(df_options.reset_index(), df_stock_long, left_on =['symbol','lastTradeDate'], right_on=['stock_name','Date'])
     df_merged = df_merged.drop(columns=['Date','stock_name'])
 
-    df_merged = pd.merge(df_merged, df_methods, left_on =['symbol'], right_on=['symbol'])
-
-    df_merged.to_csv(merged_path)
+    df_merged = pd.merge(df_merged, df_methods, left_on =['symbol'], right_on=['symbol'])   
+    if (OldOptions == False):
+        df_merged.to_csv(merged_path)
+    if (OldOptions == True):
+        df_merged.to_csv(old_merged_path)
     return df_merged
 

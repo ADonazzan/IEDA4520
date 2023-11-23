@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.stats as stats
+import ML_pricing as ML
 
 nPaths = 1000
 '''
@@ -75,10 +76,10 @@ def BinomialTree(S0, K, T, sigma, r, type):
     for i in range(N-1, -1, -1):
         if type == "calls":
             for j in range(i+1):
-                option_tree[i, j] = max(np.exp(r*dt) * (q * option_tree[i+1, j] + (1-q) * option_tree[i+1, j+1]), stock_tree[i, j] - K)
+                option_tree[i, j] = max(np.exp(-r*dt) * (q * option_tree[i+1, j] + (1-q) * option_tree[i+1, j+1]), stock_tree[i, j] - K)
         elif type == "puts":
             for j in range(i+1):
-                option_tree[i, j] = max(np.exp(r*dt) * (q * option_tree[i+1, j] + (1-q) * option_tree[i+1, j+1]), K - stock_tree[i, j])
+                option_tree[i, j] = max(np.exp(-r*dt) * (q * option_tree[i+1, j] + (1-q) * option_tree[i+1, j+1]), K - stock_tree[i, j])
     
     return option_tree[0, 0]
 
@@ -88,7 +89,8 @@ def MertonJD(S0, r, sigma, T, nSteps, lamb = 0.075, a = -0.1, b = 0.05):
     Merton Jump Diffusion Model
     ---------------------------
     '''
-    T_vec, dt = np.linspace(0, T, nSteps+1, retstep = True)
+    N = int(np.ceil(T*252)) #Time steps with trading days
+    dt = T / N
     S_arr = np.zeros([nPaths, nSteps+1])
     S_arr[:,0] = S0
     Z_1 = np.random.normal(size = (nPaths, nSteps))
@@ -122,9 +124,9 @@ M = nPaths  # number of simulations
 
 def LSMC_put(S_0, K, T, sigma, r):
     '''
-    ---------------------------
-    Least Squares Monte Carlo Model
-    ---------------------------
+    -----------------------------------------------
+    Least Squares Monte Carlo Model for put options
+    -----------------------------------------------
     '''
     # generate the stock price paths
     N = int(np.ceil(T*252)) #Time steps with trading days
@@ -143,7 +145,7 @@ def LSMC_put(S_0, K, T, sigma, r):
     dis_cfl = np.zeros((M, N+1)) # discounted cashflow at every timestep 
     dis_cfl[:,N] = payoff[:,N] 
     exercise_flag = np.zeros((M,N)) # should we exercise
-    cond = S[:,-1] < K # not in the money
+    cond = S[:,-1] < K # in the money
     exercise_flag[cond, -1] = 1
     for i in range(N-1, 0, -1): # backward
         cond = S[:,i] < K
@@ -168,6 +170,11 @@ def LSMC_put(S_0, K, T, sigma, r):
 
 
 def LSMC_call(S_0, K, T, sigma, r):
+    '''
+    -----------------------------------------------
+    Least Squares Monte Carlo Model for call options
+    -----------------------------------------------
+    '''
     # generate the stock price paths
     N = int(np.ceil(T*252)) #Time steps with trading days
     dt = T / N
@@ -179,7 +186,7 @@ def LSMC_call(S_0, K, T, sigma, r):
     dis_cfl = np.zeros((M, N+1)) # discounted cashflow at every timestep 
     dis_cfl[:,N] = payoff[:,N] 
     exercise_flag = np.zeros((M,N)) # should we exercise
-    cond = S[:,-1] > K # not in the money
+    cond = S[:,-1] > K # in the money
     exercise_flag[cond, -1] = 1
     for i in range(N-1, 0, -1): # backward
         cond = S[:,i] > K
@@ -225,3 +232,34 @@ def LSMC(S0, K, T, sigma, r, type):
     
     return price
     
+def XGBr(S0, K, T, sigma, r, type, method):
+    match method, type:
+        case 'A', 'calls':
+            price = ML.XGBr_am_calls(S0, K, T, sigma, r)
+        case 'A', 'puts':
+            price = ML.XGBr_am_puts(S0, K, T, sigma, r)
+        case 'E', 'calls':
+            price = ML.XGBr_eu_calls(S0, K, T, sigma, r)
+        case 'E', 'puts':
+            price = ML.XGBr_eu_puts(S0, K, T, sigma, r)
+        case _:
+            raise Exception('error') 
+    
+    # match method:
+    #     case 'A':
+    #         match type:
+    #             case 'calls':
+    #                 price = ML.XGBr_am_calls(S0, K, T, sigma, r)
+    #             case 'puts':
+    #                 price = ML.XGBr_am_puts(S0, K, T, sigma, r)
+    #             case _:
+    #                 raise Exception('error')
+    #     case 'E':
+    #         match type:
+    #             case 'calls':
+    #                 price = ML.XGBr_eu_calls(S0, K, T, sigma, r)
+    #             case 'puts':
+    #                 price = ML.XGBr_eu_puts(S0, K, T, sigma, r)
+    #             case _:
+    #                 raise Exception('error')                  
+    return price
