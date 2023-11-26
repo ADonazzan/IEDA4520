@@ -37,12 +37,13 @@ def update_stock(start_date, df_end):
     #-- Create dataframe with the trading dates in the interval --
     df = tickers[0].history(start = start_date,end = df_end)[['Close']] 
     df = df.drop(columns=['Close'])
+    length_vectors = len(df)
 
     #-- Populates dataframe with data from all the stock_identifiers entered in "stock_identifier" --
     for i in range(len(tickers)):
         stock = tickers[i]
         temp_data = stock.history(start = start_date,end = df_end)[['Close']]
-        temp_data = temp_data[:1269]
+        temp_data = temp_data[:length_vectors]
         temp_data = temp_data.set_index(df.index)
         df[stock_identifier[i]] = temp_data
 
@@ -116,7 +117,7 @@ def GetData(start_date, df_end, trade_days, Update, OldOptions = False):
         df_merged = pd.read_csv(merged_path)
         return df_merged
     if Update == False and OldOptions == True:
-        df_merged = pd.read_csv(old_merged_path)
+        df_merged = pd.read_csv(old_merged_path, index_col=0)
         return df_merged
     # Get data from Data file
     df_stock = getstock(start_date, df_end, Update)

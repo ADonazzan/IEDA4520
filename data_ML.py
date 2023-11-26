@@ -1,10 +1,4 @@
-import yfinance as yf
-from yahooquery import Ticker
 from datetime import date, timedelta, datetime
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import Price_Models as pm
 import Data
 
 def getdata(OldData = False):
@@ -21,6 +15,7 @@ def getdata(OldData = False):
 
     # Importing data
     df = Data.GetData(start_date, df_end, trade_days, Update, OldData)
+    df = df[df.lastTradeDate > '2023-11-14']
     df = df.drop(columns=['symbol', 'expiration', 'lastTradeDate', 'inTheMoney'])
 
     def binary_vec_type(strings):

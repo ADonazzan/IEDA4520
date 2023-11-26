@@ -2,7 +2,7 @@ import numpy as np
 import scipy.stats as stats
 import ML_pricing as ML
 
-nPaths = 1000
+nPaths = 3000
 '''
 ----------------------------------------
 Black Scholes model for european options
@@ -83,7 +83,7 @@ def BinomialTree(S0, K, T, sigma, r, type):
     
     return option_tree[0, 0]
 
-def MertonJD(S0, r, sigma, T, nSteps, lamb = 0.075, a = -0.1, b = 0.05):
+def MertonJD(S0, r, sigma, T, nSteps, lamb = 0.15, a = -0.1, b = 0.05):
     '''
     ---------------------------
     Merton Jump Diffusion Model
@@ -100,7 +100,7 @@ def MertonJD(S0, r, sigma, T, nSteps, lamb = 0.075, a = -0.1, b = 0.05):
         S_arr[:,i+1] = S_arr[:,i]*np.exp((r - sigma**2/2)*dt + sigma*np.sqrt(dt) * Z_1[:,i] + a*Pois[:,i] + b * np.sqrt(Pois[:,i]) * Z_2[:,i])
     return S_arr
 
-def MJD(S0, K, T, sigma, r, type):
+def MJD(S0, K, T, sigma, r, type, lamb = 0.15, a = -0.1, b = 0.05):
     """
     S0 = stock price at first day
     K = strike
@@ -110,7 +110,7 @@ def MJD(S0, K, T, sigma, r, type):
     type = call/put
     """
     nSteps = int(np.ceil(T*252)) #Time steps with trading days
-    X = MertonJD(S0, r, sigma, T, nSteps)
+    X = MertonJD(S0, r, sigma, T, nSteps, lamb, a, b)
     
     if type == "puts":
         Price = np.mean(np.exp(-r*T)*np.maximum(0,K-X[:,-1]))
@@ -190,7 +190,7 @@ def LSMC_call(S_0, K, T, sigma, r):
     exercise_flag[cond, -1] = 1
     for i in range(N-1, 0, -1): # backward
         cond = S[:,i] > K
-        X = np.column_stack([np.ones(M), S[:,i], S[:,i]**2])
+        X = np.column_stack([np.ones(M), S[:,i], S[:,i]**2, S[:,i]**3,S[:,i]**4,S[:,i]**5])
         cond_x = X[cond, :]
         Y = np.exp(-r*dt) * dis_cfl[cond,i+1]
         beta = np.linalg.lstsq(cond_x, Y, rcond=None)[0]
@@ -231,35 +231,55 @@ def LSMC(S0, K, T, sigma, r, type):
         raise Exception("Unexpected input")
     
     return price
+
+"""
+-----------------------------------------------
+Machine learning algorithms
+-----------------------------------------------
+"""
     
 def XGBr(S0, K, T, sigma, r, type, method):
+    # match method, type:
+    #     case 'A', 'calls':
+    #         price = ML.XGBr_am_calls(S0, K, T, sigma, r)
+    #     case 'A', 'puts':
+    #         price = ML.XGBr_am_puts(S0, K, T, sigma, r)
+    #     case 'E', 'calls':
+    #         price = ML.XGBr_eu_calls(S0, K, T, sigma, r)
+    #     case 'E', 'puts':
+    #         price = ML.XGBr_eu_puts(S0, K, T, sigma, r)
+    #     case _:
+    #         raise Exception('error') 
+    
+    match method:
+        case 'A':
+            match type:
+                case 'calls':
+                    price = ML.XGBr_am_calls(S0, K, T, sigma, r)
+                case 'puts':
+                    price = ML.XGBr_am_puts(S0, K, T, sigma, r)
+                case _:
+                    raise Exception('error')
+        case 'E':
+            match type:
+                case 'calls':
+                    price = ML.XGBr_eu_calls(S0, K, T, sigma, r)
+                case 'puts':
+                    price = ML.XGBr_eu_puts(S0, K, T, sigma, r)
+                case _:
+                    raise Exception('error')                  
+    return price
+
+def DTR(S0, K, T, sigma, r, type, method):
     match method, type:
         case 'A', 'calls':
-            price = ML.XGBr_am_calls(S0, K, T, sigma, r)
+            price = ML.DTR_am_calls(S0, K, T, sigma, r)
         case 'A', 'puts':
-            price = ML.XGBr_am_puts(S0, K, T, sigma, r)
+            price = ML.DTR_am_puts(S0, K, T, sigma, r)
         case 'E', 'calls':
-            price = ML.XGBr_eu_calls(S0, K, T, sigma, r)
+            price = ML.DTR_eu_calls(S0, K, T, sigma, r)
         case 'E', 'puts':
-            price = ML.XGBr_eu_puts(S0, K, T, sigma, r)
+            price = ML.DTR_eu_puts(S0, K, T, sigma, r)
         case _:
             raise Exception('error') 
-    
-    # match method:
-    #     case 'A':
-    #         match type:
-    #             case 'calls':
-    #                 price = ML.XGBr_am_calls(S0, K, T, sigma, r)
-    #             case 'puts':
-    #                 price = ML.XGBr_am_puts(S0, K, T, sigma, r)
-    #             case _:
-    #                 raise Exception('error')
-    #     case 'E':
-    #         match type:
-    #             case 'calls':
-    #                 price = ML.XGBr_eu_calls(S0, K, T, sigma, r)
-    #             case 'puts':
-    #                 price = ML.XGBr_eu_puts(S0, K, T, sigma, r)
-    #             case _:
-    #                 raise Exception('error')                  
     return price

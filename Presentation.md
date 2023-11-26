@@ -1,47 +1,26 @@
 ---
 marp: true
 theme: default
+math: katex
 ---
-*Andrea Donazzan, Amadeus Lars Linge*
-# Empirical Comparison of Option Pricing Models
+
+# **Empirical Comparison of Option Pricing Models**
+
+Andrea Donazzan, Amadeus Lars Linge
+*IEDA 4520*
+
+
 ---
 ## Content
-- Data collection
-- Monte Carlo pricing models
-- Calibration
+- Monte Carlo Pricing Models
 - Pricing with Machine Learning
+- Data Collection
+- Calibration
 - Results
----
 
-## Data Collection
+--- 
 
-**Goal:** build database with market price of options and information about underlying
-
-Stock data: ```yfinance ```\
-Option data: ```yahooquery```
-
-```python
-from yahooquery import Ticker
-Ticker('AAPL').option_chain
-```
-![option](./Presentation%20files/Option_Chain.png)
-
-
----
-## Modifying Option Chain
-Add price of underlying, historical variablility, option maturity
-
-
-```python
-import Data
-Data.GetData('2018,11,22', '2022,11,22', 252, False)
-```
-
-![data](./Presentation%20files/Data_df.png)
-
----
-
-# Pricing Models
+# **Pricing Models**
 European Options: 
 - **Black Scholes** Model (GMB) 
 - Merton's **Jump Diffusion** (GMB with Poisson)
@@ -72,7 +51,7 @@ Value at each time step: maximum between early exercise value and continuation v
 
 For an **American call** option:
 $$
-O_t^i = \max\left((S_t^i - K)^+,\: e^{-(T-t)r}(E[S_T|S_t^i] - K)^+ \right)
+O_t^i =\max\left(\underbrace{(S_t^i - K)^+}_\text{early exercise},\: \underbrace{e^{-(T-t)r}(E[S_T|S_t^i] - K)^+}_\text{continuation value} \right)
 $$
 
 ---
@@ -80,7 +59,7 @@ $$
 ## Binomial Trees 1: Simulate Stock Value
 Stock price can:
 - Move up to $uS_{0}$ with probability $q$
-- Move down to $uS_{0}$ with probability $(1-q)$
+- Move down to $dS_{0}$ with probability $(1-q)$
 $$
 u = e^{\sigma \sqrt{\Delta t}}
 \qquad
@@ -97,74 +76,192 @@ img[alt~="center"] {
 }
 </style>
 
-![center width:650](./Presentation%20files/Stock_tree.png)
+![center width:400](./Presentation%20files/Stock_tree.png)
 
 ---
 
 ## Binomial Trees 2: Compute Option Price
 Start from end of tree and move upwards:
 
-At maturity, compute value as $\max(S_{T,j}-K, 0) $
+At maturity, compute value as $\max(S_{T,j}-K, 0)$
 
 For each previous node compute 
 $$
-\quad O_{i,j} = \max \left(\underbrace{e^{-r\Delta t}(qO_{(i+1),j}+(1-q)O_{(i+1),(j+1)})}_\text{continuation value},\; \underbrace{S_{i,j}-K}_\text{immediate exercise}\right)
+\quad O_{i,j} = \max \left(e^{-r\Delta t}(qO_{(i+1),j}+(1-q)O_{(i+1),(j+1)}),\;S_{i,j}-K\right)
 $$
 
-![center width:370px](./Presentation%20files/Option_tree.png)
+![center width:400px](./Presentation%20files/Option_tree.png)
 
 ---
 
-## Longstaff-Schwartz algorithm
-- Proposed in **Longstaff and Schwartz (2001)**.
-- Computes price of options that can be exercised before maturity.
-- Uses least-squares regression to estimate conditional expectations.
-
----
-
-## Motivation: Why do we need the LSMC algorithm?
+## Why do we need the Longstaff-Schwartz algorithm?
 
 - How can we evaluate the **continuation value** $E[S_T|S_t^i]$?
 
-    Nested Monte Carlo simulations for every $S_t^i$ until maturity &rarr; **unfeasible** for large numbers
+    Nested Monte Carlo simulations &rarr; **unfeasible** for large numbers
     
-- Binomial Tree: high discretization error if used with long time steps.
+- *Binomial Tree:* **discretization** error if used with long time steps.
 
     Will **underestimate** the number of **early exercise opportunities** as it only provides two outcomes for the value of the underlying.
 
-    On the other hand, time complexity: $O(2^n)$
+    *Time complexity*: $O(2^n)$
 
 ---
 
-# Calibration
+## LSMC explanation: an example
 
---
+We take as example an **American call** option with 1 year maturity, exercisable at times 1,2,3:
 
-## Jump Diffusion Calibration
+$$
+S_0 = 1,\: K = 1.1,\: r = 0.1,\: \sigma = 0.2
+$$
+
+![bg right:40% 80%](./Presentation%20files/Stock_path.png) 
+
+---
+
+## Step 1
+Setup **cash flow matrix**:
+Determine expected payoff at **maturity**.
+Since continuation value is zero = payoff of a vanilla European option
+![bg right:40% 70%](./Presentation%20files/Payoff_maturity.png) 
+
+---
+
+## Step 2
+
+- One time step back: consider the paths were the option is **in the money** at $t = T-1$.
+- Discount the future **cash flow** of holding the option: $y_{t=2,i} = e^{-r}\pi_{t=3,i}$
+- Get value of underlying at time T-1
+![bg right:30% 70%](./Presentation%20files/Disc_payoff.png) 
+
+---
+
+## Step 3
+
+- Regress $y_{t=2}$ on a set of basis functions of $S_{t=2}$ to obtain the **continuation value** 
+$$
+\hat{C}_{t,i} = \sum_{j=0}^{n} a_{t,j}B_j(S_{t,i})
+$$
+
+The parameters $a_t$ are obtained minimizing
+$$
+\frac{1}{I}\sum_{i=0}^I\left(y_{t,i}-\hat{C}_{t,i}\right)^2
+$$
+```python
+X = np.column_stack([np.ones(M), S[:,i], S[:,i]**2, S[:,i]**3,S[:,i]**4,S[:,i]**5])
+beta = np.linalg.lstsq(cond_x, Y, rcond=None)[0]
+continue_val = np.dot(X, beta)
+```
+---
+
+## Step 4
+If $S_{t,i} > \hat{C}_{t,i}$ , fill cash flow matrix with resulting cash flow from this path.
+
+Repeat until $t=0$.
+
+![bg right:30% 70%](./Presentation%20files/Continue_payoff.png)
+
+---
+
+## **Data Collection**
+
+**Goal:** build database with market price of options and information about underlying
+
+
+Stock data: ```yfinance ``` $\qquad$ Option data: ```yahooquery```
+```python
+def BS(S0, K, T, sigma, r, type):
+```
+**Option Chain:**
+![option](./Presentation%20files/Option_Chain.png)
+
+
+---
+## Modifying Option Chain
+Add price of underlying, maturity, variablility, mean returns.
+
+```python
+import Data
+Data.GetData('2018,11,22', '2022,11,22', 252, False)
+```
+
+![data](./Presentation%20files/Data_df.png)
+
+---
+
+## **Jump Diffusion Calibration**
 Parameters:
 - $\lambda$ &rarr; rate of Poisson process 
 - $a$ and $b$ &rarr; size of the jump
 
 Test different values for each parameter holding the other two constant 
 Compute mean squared error of estimated prices
-<table style="width:100%"><tr>
-<td> <img src="./Presentation files/MJD_lambda_error.png"/> </td>
-<td> <img src="./Presentation files/MJD_a_error.png"/> </td>
-<td> <img src="./Presentation files/MJD_b_error.png" /> </td>
-</tr></table>
+```python
+df = df.sample(n)
+lamb_values = np.linspace(0,0.4, iterations)
+for i in range(iterations):
+  lamb = lamb_values[i]
+  errors.append(compute_errors(lamb, a, b))
 
-$\lambda = 0.075, a = -0.1, b = 0.05$
+```
+
 ---
+![center](./Presentation%20files/MJD_calibration.png)
+$\lambda = 0.15, a = -0.1, b = 0.05$
 
-
-<table style="width:100%">
-    <tr>
-        <img src="./Presentation files/MJD_lambda_error.png"  width="200">
-        <img src="./Presentation files/MJD_a_error.png"  width="200">
-        <img src="./Presentation files/MJD_b_error.png"  width="200">
-    </tr>
-</table>
 ---
 
 ## Interest rate and Standard Deviation calibration
+
+---
+## Error given interest rate
+
+![center width:900](./Presentation%20files/err_interest.png)
+
+---
+## Error given volatility
+
+![center width:900](./Presentation%20files/err_volatility.png)
+
+---
+
+# Results
+---
+
+## Algorithm runtime
+![center](./Presentation%20files/Execution_time.png)
+
+---
+
+## Option prices: Predicted against Market
+
+![center](./Presentation%20files/Model_predictions.png)
+
+---
+
+## Distribution of errors
+![center](./Presentation%20files/Model_errors.png)
+
+---
+<style>
+img[alt~="top-right"] {
+  position: absolute;
+  top: 100px;
+  right: 30px;
+}
+</style>
+
+<style>
+img[alt~="bottom-right"] {
+  position: absolute;
+  top: 130px;
+  left: 60px;
+}
+</style>
+
+![top-right](./Presentation%20files/Violinplot_errors.png)
+
+![bottom-right width:500](./Presentation%20files/Summary_errors.png)
+
 
