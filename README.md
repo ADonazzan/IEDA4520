@@ -16,6 +16,6 @@ Andrea Donazzan, Amadeus Lars Linge\
 7.  *Calibration.ipynb* &rarr; Calibration of interest rate and volatility
 8.  *ML_calibration.ipynb* &rarr; Training of machine learning models
 9.  *Execution_Time.ipynb* &rarr; Models execution time computation
-10. *graphs.ipynb* &rarr; Creation of graphs of results
+10. ***graphs.ipynb*** &rarr; Creation of graphs of results
 11. *Presentation.md* &rarr; Slides in markdown format
-12. *IEDA4520_group_7_project.pdf* &rarr; Final presentation in pdf
+12. ***IEDA4520_group_7_project.pdf*** &rarr; Final presentation in pdf
