@@ -9,7 +9,7 @@ print('done')
 import Data
 
 # Set to true to update database from online data, if false will pull data from csv files
-Update = True 
+Update = False 
 trade_days = 256
 est_price_path = './Data/est_prices.csv'
 
