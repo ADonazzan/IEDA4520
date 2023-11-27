@@ -164,6 +164,102 @@ Repeat until $t=0$.
 
 ---
 
+# Pricing with Machine Learning
+---
+# Splitting the data
+4 sets of data in total for training:
+- European Options: calls/puts
+- American Options: calls/puts
+```python
+from sklearn.model_selection import train_test_split
+
+X_train_calls, X_test_calls, y_train_calls, y_test_calls = train_test_split(X_calls, y_calls, test_size=0.25)
+X_train_puts, X_test_puts, y_train_puts, y_test_puts = train_test_split(X_puts, y_puts, test_size=0.25)
+
+Train calls: (27187, 5)
+Test calls: (9063, 5)
+Train puts: (18194, 5)
+Test puts: (6065, 5)
+```
+---
+# Models
+     DTR - Decision Tree Regressor
+     XGBr - Xtreme Gradient Booster
+
+Supervised Learning Models
+```python
+(S0, K, T, sigma, r) --> option price
+```
+     
+---
+# DecisionTreeRegressor
+```python
+DTR_calls = DecisionTreeRegressor(max_depth=24, min_samples_leaf=1)
+DTR_calls.fit(X_train_calls, y_train_calls)
+DTR1_pred = DTR_calls.predict(X_test_calls)
+DTR1_rmse = np.sqrt(mean_squared_error(y_test_calls, DTR1_pred))
+```
+![center width:700](./Presentation%20files/regressiontree.png)
+
+---
+# XGBr
+<style>
+img[alt~="center"] {
+  display: block;
+  margin: 0 auto;
+}
+</style>
+```python
+XGBr = xg.XGBRegressor(learning_rate=0.1, gamma= 0.001, 
+max_depth= 5, min_child_weight= 6, 
+subsample= 1, n_estimators=900)
+
+XGBr.fit(X_train_calls, y_train_calls)
+XGBr_pred = XGBr.predict(X_test_calls)
+```
+- Advanced verison of GBM
+- Ensemble of decision trees
+
+![bg right 30% 70%](./Presentation%20files/grad_decent.png)
+
+---
+- Handles missing data
+- Uses L1 and L2 regularization (Lasso- and Ridge-regularization)
+- Tree pruning 
+- Parallelized 
+---
+## Pipeline
+```python
+def model(pipeline, parameters, X_train, y_train, X, y, figname):
+
+    grid_obj = GridSearchCV(estimator = pipeline, param_grid = parameters, cv = 5, 
+                            scoring = 'r2', verbose = 0, n_jobs = 1, refit = True)
+
+    grid_obj.fit(X_train, y_train)
+
+    print("Best Param:", grid_obj.best_params_)
+    estimator = grid_obj.best_estimator_
+    shuffle = KFold(n_splits = 5, shuffle = True, random_state = 0)
+    cv_scores = cross_val_score(estimator, X, y.ravel(), cv=shuffle, scoring='r2')
+
+    y_pred = cross_val_predict(estimator, X, y, cv = shuffle)
+    
+```
+---
+## XGBr optimal parameters
+![center width:600](./Presentation%20files/CV_XGBr_calls_plot.png)
+ ```python
+ Best Param: {'xgb__colsample_bytree': 1, 'xgb__gamma': 0.01, 'xgb__max_depth': 5, 'xgb__min_child_weight': 3, 'xgb__subsample': 0.6}
+ ```
+---
+## DecisionTreeRegressor optimal parameters
+![center width:600](./Presentation%20files/CV_DTR_calls_plot.png)
+```python
+Best Param: {'dt__max_depth': 16, 'dt__min_samples_leaf': 1}
+```
+
+---
+
 ## **Data Collection**
 
 **Goal:** build database with market price of options and information about underlying

@@ -45,14 +45,15 @@ img[alt~="center"] {
 }
 </style>
 ```python
-XGBr = xg.XGBRegressor(learning_rate=0.1, colsample_bytree= 1,
-                        gamma= 0.001, max_depth= 5, 
-                        min_child_weight= 6, subsample= 1, n_estimators=900)
+XGBr = xg.XGBRegressor(learning_rate=0.1, gamma= 0.001, max_depth= 5, 
+      min_child_weight= 6, subsample= 1, n_estimators=900)
 
 XGBr.fit(X_train_calls, y_train_calls)
 XGBr_pred = XGBr.predict(X_test_calls)
-
 ```
+- Advanced verison of GBM
+- Ensemble learning
+
 ---
 # Pipeline
 ```python
@@ -87,6 +88,5 @@ def model(pipeline, parameters, X_train, y_train, X, y, figname):
 ```python
 Best Param: {'dt__max_depth': 16, 'dt__min_samples_leaf': 1}
 ```
----
 
 
