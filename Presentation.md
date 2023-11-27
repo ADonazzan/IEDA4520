@@ -197,7 +197,6 @@ Supervised Learning Models
 DTR_calls = DecisionTreeRegressor(max_depth=24, min_samples_leaf=1)
 DTR_calls.fit(X_train_calls, y_train_calls)
 DTR1_pred = DTR_calls.predict(X_test_calls)
-DTR1_rmse = np.sqrt(mean_squared_error(y_test_calls, DTR1_pred))
 ```
 ![center width:700](./Presentation%20files/regressiontree.png)
 
@@ -209,6 +208,18 @@ img[alt~="center"] {
   margin: 0 auto;
 }
 </style>
+
+- Advanced verison of GBM
+- Ensemble of decision trees
+
+![bg right 30% 70%](./Presentation%20files/grad_decent.png)
+
+
+- Handles missing data
+- Uses L1 and L2 regularization (Lasso- and Ridge-regularization)
+- Tree pruning 
+- Parallelized 
+
 ```python
 XGBr = xg.XGBRegressor(learning_rate=0.1, gamma= 0.001, 
 max_depth= 5, min_child_weight= 6, 
@@ -217,17 +228,9 @@ subsample= 1, n_estimators=900)
 XGBr.fit(X_train_calls, y_train_calls)
 XGBr_pred = XGBr.predict(X_test_calls)
 ```
-- Advanced verison of GBM
-- Ensemble of decision trees
-
-![bg right 30% 70%](./Presentation%20files/grad_decent.png)
 
 ---
-- Handles missing data
-- Uses L1 and L2 regularization (Lasso- and Ridge-regularization)
-- Tree pruning 
-- Parallelized 
----
+
 ## Pipeline
 ```python
 def model(pipeline, parameters, X_train, y_train, X, y, figname):
